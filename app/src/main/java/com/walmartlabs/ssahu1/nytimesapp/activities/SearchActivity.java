@@ -82,6 +82,8 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
         setupViews();
@@ -114,11 +116,36 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
         }
 
     }
+    // Append more data into the adapter
+    public void customLoadMoreDataFromApi(int offset) {
+        // This method probably sends out a network request and appends new data items to your adapter.
+        // Use the offset value and add it as a parameter to your API request to retrieve paginated data.
+        // Deserialize API response and then construct new objects to append to the adapter
+    }
 
     public void setupViews(){
         etQuery = (EditText)findViewById(R.id.etQuery);
+
         gvResults = (GridView) findViewById(R.id.gvResults);
-        etQuery = (EditText)findViewById(R.id.etQuery);
+        // Attach the listener to the AdapterView onCreate
+        gvResults.setOnScrollListener(new EndlessScrollListener() {
+            @Override
+            public boolean onLoadMore(int page, int totalItemsCount) {
+                // Triggered only when new data needs to be appended to the list
+                // Add whatever code is needed to append new items to your AdapterView
+                customLoadMoreDataFromApi(page);
+                // or customLoadMoreDataFromApi(totalItemsCount);
+                return true; // ONLY if more data is actually being loaded; false otherwise.
+            }
+
+            @Override
+            public int getFooterViewType() {
+                return 0;
+            }
+        });
+
+//        gvResults = (GridView) findViewById(R.id.gvResults);
+//        etQuery = (EditText)findViewById(R.id.etQuery);
 
         articles = new ArrayList<>();
         adapter = new ArticleArrayAdapter(this, articles);
