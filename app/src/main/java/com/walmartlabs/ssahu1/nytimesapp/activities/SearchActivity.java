@@ -36,7 +36,6 @@ import java.util.Calendar;
 import cz.msebera.android.httpclient.Header;
 
 
-
 public class SearchActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
 
     EditText etQuery;
@@ -49,7 +48,11 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
     private String searchCriteria;
     private String searchOrder;
     private String beginDateString;
+    private String query;
+
     String dateText;
+    public int pageNo = 0;
+    public RequestParams params;
 
     // attach to an onclick handler to show the date picker
     public void showDatePickerDialog(View v) {
@@ -117,23 +120,31 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
 
     }
     // Append more data into the adapter
-    public void customLoadMoreDataFromApi(int offset) {
+    public void customLoadMoreDataFromApi(View view, int pageNo) {
         // This method probably sends out a network request and appends new data items to your adapter.
         // Use the offset value and add it as a parameter to your API request to retrieve paginated data.
         // Deserialize API response and then construct new objects to append to the adapter
+
+        getArticles(view, pageNo);
+
     }
 
     public void setupViews(){
         etQuery = (EditText)findViewById(R.id.etQuery);
 
         gvResults = (GridView) findViewById(R.id.gvResults);
+
+        articles = new ArrayList<>();
+        adapter = new ArticleArrayAdapter(this, articles);
+        gvResults.setAdapter(adapter);
+
         // Attach the listener to the AdapterView onCreate
         gvResults.setOnScrollListener(new EndlessScrollListener() {
             @Override
-            public boolean onLoadMore(int page, int totalItemsCount) {
+            public boolean onLoadMore(View view, int page, int totalItemsCount) {
                 // Triggered only when new data needs to be appended to the list
                 // Add whatever code is needed to append new items to your AdapterView
-                customLoadMoreDataFromApi(page);
+                customLoadMoreDataFromApi(view, page);
                 // or customLoadMoreDataFromApi(totalItemsCount);
                 return true; // ONLY if more data is actually being loaded; false otherwise.
             }
@@ -146,10 +157,6 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
 
 //        gvResults = (GridView) findViewById(R.id.gvResults);
 //        etQuery = (EditText)findViewById(R.id.etQuery);
-
-        articles = new ArrayList<>();
-        adapter = new ArticleArrayAdapter(this, articles);
-        gvResults.setAdapter(adapter);
 
         // hook up the listener for grid click
 
@@ -171,20 +178,21 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
             }
         });
     }
-    public void onArticleSearch(View view) {
-        String query = etQuery.getText().toString();
-//        Toast.makeText(this, " searching for "+query, Toast.LENGTH_SHORT).show();
+
+    public void getArticles(View view, int pageNo){
+
 
         String url = "https://api.nytimes.com/svc/search/v2/articlesearch.json";
         AsyncHttpClient client = new AsyncHttpClient();
 
         RequestParams params = new RequestParams();
         params.put("api-key", "4e9f7298f8694c05bdcaf010dafec327");
-        params.put("page", 0);
         params.put("q", query);
         params.put("fq", searchCriteria);
         params.put("begin_date", beginDateString);
         params.put("sort", searchOrder);
+
+        params.put("page",pageNo);
 
         client.get(url, params, new JsonHttpResponseHandler(){
             @Override
@@ -192,9 +200,8 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
                 JSONArray articleJsonResults = null;
 
                 try {
-                    // clear the adapter
-                    adapter.clear();
                     articleJsonResults = response.getJSONObject("response").getJSONArray("docs");
+
                     adapter.addAll(Article.fromJSONArray(articleJsonResults));
                     Log.d("DEBUG", articles.toString());
                 }catch ( JSONException e){
@@ -202,6 +209,28 @@ public class SearchActivity extends AppCompatActivity implements DatePickerDialo
                 }
             }
         });
+
+    }
+    public void clear(){
+        this.pageNo = 0;
+        this.query = null;
+        this.searchCriteria = null;
+        this.beginDateString = null;
+        this.searchOrder = null;
+    }
+
+    public void onArticleSearch(View view) {
+        String query = etQuery.getText().toString();
+//        Toast.makeText(this, " searching for "+query, Toast.LENGTH_SHORT).show();
+        // clear the adapter
+        adapter.clear();
+        this.clear();
+        this.query = query;
+
+        // 20 items per screen.
+        for(int i=0;i<2;i++) {
+            getArticles(view, i);
+        }
     }
 
     public void onSubmit(View view) {
